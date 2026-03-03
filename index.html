@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>F-Wannabes Picker - Smart Rankings</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #111;
+  color: white;
+  max-width: 600px;
+  margin: auto;
+}
+
+h1 { text-align: center; }
+
+.driver-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0;
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+}
+
+select {
+  padding: 5px;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  font-size: 16px;
+}
+
+#status {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 15px;
+  transition: all 0.5s;
+}
+</style>
+</head>
+<body>
+
+<h1>F1 Race Ranking</h1>
+<input type="text" id="name" placeholder="Your Name">
+
+<p>Select a rank (1 = 1st, 22 = last) for each driver:</p>
+
+<div id="driverList"></div>
+
+<button onclick="submitRanking()">Submit Ranking</button>
+<p id="status"></p>
+
+<script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbwV4RuRmKF72xmqfH5FTocyGeOgkWccxJU1D__wx8X_c3uCOwa61fySgq70Con6kzcN/exec";
+
+const drivers = [
+  "Pierre Gasly - Alpine","Franco Colapinto - Alpine","Fernando Alonso - Aston Martin","Lance Stroll - Aston Martin",
+  "Nico Hulkenberg - Audi","Gabriel Bortoleto - Audi","Sergio Perez - Cadillac","Valtteri Bottas - Cadillac",
+  "Charles Leclerc - Ferrari","Lewis Hamilton - Ferrari","Esteban Ocon - Haas","Oliver Bearman - Haas",
+  "Lando Norris - McLaren","Oscar Piastri - McLaren","George Russell - Mercedes","Kimi Antonelli - Mercedes",
+  "Liam Lawson - Racing Bulls","Arvid Lindblad - Racing Bulls","Max Verstappen - Red Bull",
+  "Isack Hadjar - Red Bull","Carlos Sainz - Williams","Alex Albon - Williams"
+];
+
+// Team colors
+const teamColors = {
+  "Mercedes": "#27F4D2",
+  "Red Bull": "#3671C6",
+  "Ferrari": "#ED1131",
+  "McLaren": "#FF8000",
+  "Alpine": "#00A1E8",
+  "Racing Bulls": "#6692FF",
+  "Aston Martin": "#229971",
+  "Williams": "#1868DB",
+  "Haas": "#DEE1E2",
+  "Audi": "#FF2D00",
+  "Cadillac": "#AAAAAD"
+};
+
+const driverList = document.getElementById("driverList");
+const selects = [];
+
+// Create driver rows with dropdowns
+drivers.forEach(driver => {
+  const row = document.createElement("div");
+  row.className = "driver-row";
+
+  const label = document.createElement("span");
+  label.textContent = driver;
+
+  const teamName = driver.split(" - ")[1];
+  row.style.background = teamColors[teamName] || "#e10600";
+  if (teamName === "Haas") row.style.color = "black";
+
+  const select = document.createElement("select");
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "";
+  defaultOption.textContent = "Select";
+  select.appendChild(defaultOption);
+
+  for (let i = 1; i <= drivers.length; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = i;
+    select.appendChild(option);
+  }
+
+  row.appendChild(label);
+  row.appendChild(select);
+  driverList.appendChild(row);
+  selects.push(select);
+});
+
+// Update dropdowns to remove selected numbers from other selects
+function updateDropdowns() {
+  const chosen = new Set();
+  selects.forEach(sel => {
+    if (sel.value !== "") chosen.add(sel.value);
+  });
+
+  selects.forEach(sel => {
+    const currentValue = sel.value;
+    Array.from(sel.options).forEach(opt => {
+      if (opt.value === "") return; // Keep "Select"
+      if (opt.value !== currentValue && chosen.has(opt.value)) {
+        opt.disabled = true;
+      } else {
+        opt.disabled = false;
+      }
+    });
+  });
+}
+
+// Listen for changes to update other dropdowns
+document.addEventListener("change", updateDropdowns);
+
+function submitRanking() {
+  const name = document.getElementById("name").value.trim();
+  if (!name) {
+    alert("Please enter your name");
+    return;
+  }
+
+  const ranking = [];
+  let allFilled = true;
+  selects.forEach(sel => {
+    if (sel.value === "") allFilled = false;
+    ranking.push(sel.value ? parseInt(sel.value) : 0);
+  });
+
+  if (!allFilled) {
+    alert("Please assign a rank to every driver.");
+    return;
+  }
+
+  fetch(scriptURL, {
+    method: "POST",
+    body: JSON.stringify({ name, ranking })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const statusEl = document.getElementById("status");
+    statusEl.innerText = "Submitted successfully!";
+    statusEl.style.color = "#00ff00";
+    setTimeout(() => { statusEl.innerText = ""; }, 3000);
+  })
+  .catch(err => {
+    const statusEl = document.getElementById("status");
+    statusEl.innerText = "Error submitting.";
+    statusEl.style.color = "#ff0000";
+    console.error(err);
+  });
+}
+
+</script>
+
+</body>
+</html>
